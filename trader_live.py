@@ -11,11 +11,14 @@ import requests
 import pandas as pd
 import numpy as np
 import time
+import api_funtions as api
 
-link = "https://min-api.cryptocompare.com/data/v2/histominute?fsym=BTC&tsym=usdt&limit=500"
+currency = 'SOL'
+currency_market = 'SOL-USDT'
 RSI_PERIOD = 14
+trans_ratio = 3/10
 
-history = [['type','time_hms','Prof', ' Price', 'RSI'], ['--------------------------------------------']]
+history = [['type','time_hms','Prof', ' Price', 'Amount', 'RSI'], ['---------------------------------------------------']]
 last_buy = 'first'
 last_sell = 0
 local_max = 0
@@ -26,6 +29,7 @@ total_bit = 10
 not_action_step =0
 high =65
 down =35
+
 
 
 def connect_to_api(currency, limit=500):
@@ -51,32 +55,45 @@ def connect_to_api(currency, limit=500):
     
     
 def Action_func(type_action):
+    
         global last_sell,last_buy, local_min, local_max, total_cash, total_bit, high, down
         
         
         if  (type_action == 'sell'):
+            
             if not all(a[-4:-1] < high) and (last_sell*1.0008 >= cl_array[-1]) and history[-1][0]=='sell':
                 print('not now')
                 return False
-                
-            history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1], a[-1]]) 
-            # history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1], a[-1]]) 
+            
+            temp_amount = "{:.3f}".format(float(api.currency_Inventory(currency))*trans_ratio)
+            is_sell = api.sell(currency_market ,temp_amount )
+            
+            if (is_sell):
+                history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1], a[-1], float(temp_amount)*cl_array[-1]]) 
+                print('sell')
+            else: print('ops not sell , wrong')
+
             last_sell = cl_array[-1]
             total_cash +=  cl_array[-1]
             total_bit -= 1
-            print('sell')  
+
             
         elif(type_action == 'buy '):
             if not all(a[-4:-1] > down) and (last_buy*0.9992 <= cl_array[-1]) and history[-1][0]=='buy ':
                 print('not now')
                 return False
             
-            history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1], a[-1]]) 
-            # history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1], a[-1]]) 
+            temp_amount = "{:.3f}".format(float(api.currency_Inventory('usdt'))*trans_ratio)
+            is_buy = api.buy(currency_market ,temp_amount )
+            if (is_buy):
+                history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1], a[-1], temp_amount]) 
+                print('buy')
+            else: print('ops not buy , wrong')
+
             last_buy = cl_array[-1]
             total_cash -=  cl_array[-1]
             total_bit += 1
-            print('buy ')  
+
             
         local_min = cl_array[-1]
         local_max = cl_array[-1]
@@ -110,28 +127,16 @@ def time_now(type_time = 'str'):
             return time_str
     
     
-def allow_action(type_action):
-    
-        if(type_action == 'sell'):
-            if(not (history[-1][0] == 'sell' and history[-2][0] == 'sell') or local_min + local_min*0.005 <= cl_array[-1]):    
-                return True
-            else: return False
-            
-        if(type_action == 'buy '):
-            if(not (history[-1][0] == 'buy ' and history[-2][0] == 'buy ') or local_max - local_max*0.005 >= cl_array[-1]):    
-                return True
-            else: return False
-    
 
-print('##START====> '+ time_now())
+print('\n##START====> '+ time_now())
 
 epoch = 0
 while(True):
     epoch += 1
-    print('\n==>Epoch : ',epoch ,' #####################################################\n')
+    print('\n#########==> Epoch : ',epoch ,' ##################################\n')
     
 
-    cl = connect_to_api('btc', limit=250)
+    cl = connect_to_api(currency, limit=250)
     
     cl_array = cl.values
     
@@ -185,52 +190,31 @@ while(True):
     if(action == 1):
         
         if not (history[-1][0] == 'sell' and history[-2][0] == 'sell'): 
-           # if( cl_array[-1] > last_buy and cl_array[-1] > history[-1][2]):
-                
-                # history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1], a[-1]])  
-                # last_sell = cl_array[-1]
-                # total_cash +=  cl_array[-1]
-                # total_bit -= 1
-                # print('sell')  
                 Action_func('sell')
                 
         elif(history[-1][3] + history[-1][3]*0.004 <= cl_array[-1]):
-                # history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1], a[-1]])  
-                # last_sell = cl_array[-1]
-                # total_cash +=  cl_array[-1]
-                # total_bit -= 1
-                # print('sell')  
                 Action_func('sell')
             
             
     elif(action == -1):  
         
         if not(history[-1][0] == 'buy ' and history[-2][0] == 'buy '): 
-           # if( cl_array[-1] < last_sell and cl_array[-1] < history[-1][2]):
-                
-                # history.append(['buy ', time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1], a[-1]]) 
-                # last_buy = cl_array[-1]
-                # total_cash -=  cl_array[-1]
-                # total_bit += 1
-                # print('buy ')  
+
                 Action_func('buy ')
                 
         elif(history[-1][3] - history[-1][3]*0.004 >= cl_array[-1]):
-                # history.append(['sell',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1], a[-1]])  
-                # last_sell = cl_array[-1]
-                # total_cash +=  cl_array[-1]
-                # total_bit -= 1
-                # print('sell')  
+ 
                 Action_func('buy ')
     
-    print('Time : ',time_str)
-    print('RSI : ',a[-1])
-    print('Toltal : ' , total_cash+(total_bit*cl_array[-1]))        
+    print('Time  : ',time_str)
+    print('RSI   : ',a[-1])
+    print('USDT  : ', "{:.4f}".format(float(api.currency_Inventory('usdt'))))   
+    print('Currency: ', "{:.4f}".format(float(api.currency_Inventory(currency))))     
     print('Price : ' , cl_array[-1])        
     print(*history, sep = "\n")
 
 
-    time.sleep(59)
+    time.sleep(58)
                 
             
             
