@@ -11,26 +11,29 @@ import requests
 import pandas as pd
 import numpy as np
 import time
+import csv
 import api_funtions as api
+from get_log import send_message
 
-currency = 'SOL'
-currency_market = 'SOL-USDT'
+
+
+currency = 'BTC'
+
+currency_market = 'BTC-USDT'
 RSI_PERIOD = 14
-trans_ratio = 3/10
+trans_ratio = 6/10
 
-history = [['type','time_hms','Prof', ' Price', 'buy_in', 'Amount', 'RSI' ], ['---------------------------------------------------------']]
+
 last_buy = 'first'
 last_sell = 0
-local_max = 0
-local_min = 0
 b = ''
-total_cash = 100000
-total_bit = 10
 not_action_step =0
 high =65
 down =35
-high_sell = 70
-down_sell = 30
+
+with open('history.csv', newline='') as f:
+    reader = csv.reader(f)
+    history = list(reader)
 
 
 
@@ -62,45 +65,37 @@ def Action_func(type_action):
         
         
         if  (type_action == 'sell' and cl_array[-1] > last_buy):
+
             
-            if not all(a[-4:-1] < high) and (last_sell*1.0008 >= cl_array[-1]) and history[-1][0]=='sell':
-                print('not now')
-                return False
-            
-            # temp_amount = "{:.3f}".format(float(api.currency_Inventory(currency))*trans_ratio)
-            temp_amount = buy_amount
-            
+            temp_amount = "{:.2f}".format(float(api.currency_Inventory(currency))*97/100)
             
             is_sell = api.sell(currency_market ,temp_amount )
             
             if (is_sell):
-                history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_sell, float(temp_amount)*cl_array[-1] ,int(a[-1])]) 
+                history.append(['sell',time_str, str("{:.5f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_sell, float(temp_amount)*cl_array[-1] ,int(a[-1])]) 
                 print('sell')
-            else: print('ops not sell , wrong')
+                send_message([history[0],history[-1]])
+            else: print('ops not sell , wrong ', temp_amount )
 
             last_sell = cl_array[-1]
+            high =65
 
             
         elif(type_action == 'buy '):
-            if not all(a[-4:-1] > down) and (last_buy*0.9992 <= cl_array[-1]) and history[-1][0]=='buy ':
-                print('not now')
-                return False
             
-            temp_amount = "{:.3f}".format(float(api.currency_Inventory('usdt'))*trans_ratio)
+            temp_amount = "{:.3f}".format(float(api.currency_Inventory('usdt'))*97/100)
             is_buy = api.buy(currency_market ,temp_amount )
             if (is_buy):
-                history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1],'-----', temp_amount, int(a[-1])]) 
+                history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1],'------', temp_amount, int(a[-1])]) 
                 print('buy')
-            else: print('ops not buy , wrong')
+                send_message([history[0],history[-1]])
+            else: print('ops not buy , wrong',  temp_amount )
 
-            # last_buy = cl_array[-1]
+            last_buy = cl_array[-1]
+            down =35
 
-
-            
-        local_min = cl_array[-1]
-        local_max = cl_array[-1]
-        high =65
-        down =35
+        
+        
     
     
 def update_locals():
@@ -108,32 +103,15 @@ def update_locals():
         
         
         if (last_buy =='first'):
-            last_buy = cl_array[-1]
-            last_sell = cl_array[-1]
-            local_max = cl_array[-1]
-            local_min = cl_array[-1]
-            
-        temp_buy_price = 0
-        temp_buy_amount= 0
-        for i in history:
-            if i[0] == 'buy ':
-                temp_buy_price+= i[3]* float(i[4])
-                temp_buy_amount+= float(i[4])
-            else :
-                break
-        if(temp_buy_price != 0):
-            last_buy= temp_buy_price / temp_buy_amount
-            
-        
-        if (local_max < cl_array[-1]):
-            local_max = cl_array[-1]
-            
-        if (local_min > cl_array[-1]):
-            local_min = cl_array[-1]
+                last_buy = cl_array[-1]
+                last_sell = cl_array[-1]
+                local_max = cl_array[-1]
+                local_min = cl_array[-1]
+
+                    
             
         action = 0
-        
-        return temp_buy_amount
+
         
 
 
@@ -151,6 +129,8 @@ print('\n##START====> '+ time_now())
 
 epoch = 0
 while(True):
+    # send_message([history[0],history[-1]])
+    start = time.time()
     epoch += 1
     print('\n#########==> Epoch : ',epoch ,' ##################################\n')
     
@@ -163,15 +143,15 @@ while(True):
     
     time_str = time_now()  
     
-    buy_amount = update_locals()
+    update_locals()
 
     if(b==''):
-        if  (a[-1] >= high_sell):# and all(a[-2:-1] < high)) :
+        if  (a[-1] >= high):# and all(a[-2:-1] < high)) :
             b= 'up'
             print('up')
             not_action_step =0
 
-        elif(a[-1] <= down_sell):# and all(a[-3:-1]>down)) :
+        elif(a[-1] <= down):# and all(a[-3:-1]>down)) :
             b= 'down'
             print('down')
             not_action_step =0
@@ -179,62 +159,66 @@ while(True):
             not_action_step+=1
     
     if(b ==''):
-        if local_min + local_min*0.006 <= cl_array[-1]:
+        if last_buy + last_buy*0.0052 <= cl_array[-1]:
             print('+5p')
             not_action_step =0
         
             action = 1
-        if local_max - local_max*0.005 >= cl_array[-1]:
-            print('-5p')
+            
+        if last_buy - last_buy*0.003 > cl_array[-1]:
+            print('-p')
             not_action_step =0
-            action = -1
-    
-    
-    if(not_action_step >= 20): 
-        high -=2
-        down +=2
+            
+            break
+            action = 1
+            
+    if(not_action_step >= 15): 
+        high -=1.5
+        down +=1.5
         not_action_step -= 10
         
         
-    if b =='up' :#and a[-1] > a[-2]:
+        
+    if b  ==  'up' and a[-1] >= a[-2]:
         action = 1
         b= ''
     
-    if b =='down' :# and a[-1] < a[-2]:
+    if b == 'down' and a[-1] <= a[-2]:
         action = -1
         b= ''
+        
         
         
                     
     if(action == 1):
         
-        if not (history[-1][0] == 'sell'):# and history[-2][0] == 'sell'): 
+        if not (history[-1][0] == 'sell'):
                 Action_func('sell')
                 
-        # elif(history[-1][3] + history[-1][3]*0.006 <= cl_array[-1]):
-        #         Action_func('sell')
-            
             
     elif(action == -1):  
         
-        if not(history[-1][0] == 'buy ' and history[-2][0] == 'buy '): 
-
+        if not(history[-1][0] == 'buy '): 
                 Action_func('buy ')
-                
-        elif(history[-1][3] - history[-1][3]*0.004 >= cl_array[-1]):
- 
-                Action_func('buy ')
+    
+    
+    
+    
+    with open('history.csv', 'w', newline='') as f:
+        write = csv.writer(f)
+        write.writerows(history)
+        f.close()
     
     print('Time  : ',time_str)
     print('RSI   : ',a[-1])
     print('USDT  : ', "{:.4f}".format(float(api.currency_Inventory('usdt'))))   
-    print('Currency: ', "{:.4f}".format(float(api.currency_Inventory(currency))))    
-    print('last_sells: ', last_sell)    
+    print('Currency: ', "{:.5f}".format(float(api.currency_Inventory(currency))))    
     print('Price : ' , cl_array[-1])        
     print(*history, sep = "\n")
+    end = time.time()
 
 
-    time.sleep(58)
+    time.sleep(60 - (end-start))
                 
             
             

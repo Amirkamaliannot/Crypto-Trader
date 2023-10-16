@@ -9,6 +9,7 @@ Created on Fri Feb  4 17:01:18 2022
 from kucoin.client import Client
 from time import time
 import numpy as np
+import pandas as pd
 
 api_key = '61fd42c3fc26a7000117fd0b'
 api_secret = '2fed061c-d5ef-4e89-b11a-4de9b4a11445'
@@ -22,7 +23,8 @@ def live_price(symbol):
     klines = client.get_kline_data(symbol, '1min', start= int(time()- 7200))
     klines = np.array(klines)
     close = klines[: , 2]
-    return close
+    cl_df = pd.DataFrame(close,columns=['close'],dtype='float64')
+    return close , cl_df
     
 
 def buy(symbol , size):
@@ -43,8 +45,6 @@ def sell(symbol , size):
 def currency_Inventory(currency):
     client = Client(api_key, api_secret, api_passphrase)
     return client.get_accounts(currency)[0]['available']
-    
-
 
 
 
