@@ -7,6 +7,7 @@ Created on Fri Feb  4 17:01:18 2022
 
 from kucoin.client import Client
 from time import time
+from time import sleep
 import numpy as np
 import requests
 import pandas as pd
@@ -24,6 +25,17 @@ def live_price(symbol):
     close = klines[: , 2].astype(float)
     close = close[::-1]
     return close
+
+
+def live_price3(symbol):
+    link = "https://api.kucoin.com/api/v1/market/candles?symbol="+symbol+"&type=1min"
+    klines = requests.get(link).json()['data']
+    klines = np.array(klines)
+    close = klines[: , 2].astype(float)
+    close = close[::-1]
+    return close
+
+        
 
 def live_price2(currency, limit=500):
     
@@ -92,18 +104,17 @@ def usdt_percentage(currency):
 
 
 
-def total_money():
+def total_money(price):
     currency_list = client.get_accounts()
     all_ = 0
     for i in currency_list:
         if (i['currency']=='USDT'):
             all_ += float(i['available'])
         else:
-            link = "https://min-api.cryptocompare.com/data/price?fsym="+i['currency']+"&tsyms=USDT&e=kucoin"
-            price = requests.get(link).json()['USDT']
+            # link = "https://min-api.cryptocompare.com/data/price?fsym="+i['currency']+"&tsyms=USDT&e=kucoin"
+            # price = requests.get(link).json()['USDT']
             all_ += price * float(i['available'])
     return float("{:.2f}".format(all_))
-
 
 
 
@@ -113,9 +124,7 @@ def internet_on():
         return True
     except: 
         return False
-
-
-
-print(total_money())
+    
+# print(total_money())
 
 
