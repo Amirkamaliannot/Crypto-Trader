@@ -13,24 +13,22 @@ import numpy as np
 import time
 import api_funtions as api
 
-currency = 'SOL'
-currency_market = 'SOL-USDT'
+currency = 'luna'
+currency_market = 'LUNA-USDT'
 RSI_PERIOD = 14
-trans_ratio = 3/10
+trans_ratio = 6/10
 
-history = [['type','time_hms','Prof', ' Price', 'buy_in', 'Amount', 'RSI' ], ['---------------------------------------------------------']]
+history = [['type','time_hms','Prof', 'Price', 'buy_in', 'Amount', 'RSI' ], ['------------------------------------------------------------']]
 last_buy = 'first'
 last_sell = 0
 local_max = 0
 local_min = 0
 b = ''
-total_cash = 100000
-total_bit = 10
 not_action_step =0
-high =65
+high =67
 down =35
-high_sell = 70
-down_sell = 30
+# high_sell = 70
+# down_sell = 30
 
 
 
@@ -71,12 +69,12 @@ def Action_func(type_action):
             temp_amount = buy_amount
             
             
-            is_sell = api.sell(currency_market ,temp_amount )
+            is_sell = api.sell(currency_market ,"{:.2f}".format(temp_amount) )
             
             if (is_sell):
                 history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_sell, float(temp_amount)*cl_array[-1] ,int(a[-1])]) 
                 print('sell')
-            else: print('ops not sell , wrong')
+            else: print('ops not sell , wrong ', "{:.2f}".format(temp_amount) )
 
             last_sell = cl_array[-1]
 
@@ -89,7 +87,7 @@ def Action_func(type_action):
             temp_amount = "{:.3f}".format(float(api.currency_Inventory('usdt'))*trans_ratio)
             is_buy = api.buy(currency_market ,temp_amount )
             if (is_buy):
-                history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1],'-----', temp_amount, int(a[-1])]) 
+                history.append(['buy ',time_str, str("{:.2f}".format((last_sell- cl_array[-1])/last_sell*100))+'%', cl_array[-1],'------', temp_amount, int(a[-1])]) 
                 print('buy')
             else: print('ops not buy , wrong')
 
@@ -99,7 +97,7 @@ def Action_func(type_action):
             
         local_min = cl_array[-1]
         local_max = cl_array[-1]
-        high =65
+        high =67
         down =35
     
     
@@ -115,14 +113,15 @@ def update_locals():
             
         temp_buy_price = 0
         temp_buy_amount= 0
-        for i in history:
+        for i in history[::-1]:
             if i[0] == 'buy ':
-                temp_buy_price+= i[3]* float(i[4])
-                temp_buy_amount+= float(i[4])
+                temp_buy_price+= i[3]* float(i[5])
+                temp_buy_amount+= float(i[5])
             else :
                 break
         if(temp_buy_price != 0):
             last_buy= temp_buy_price / temp_buy_amount
+        temp_buy_amount = temp_buy_amount/cl_array[-1]
             
         
         if (local_max < cl_array[-1]):
@@ -166,12 +165,12 @@ while(True):
     buy_amount = update_locals()
 
     if(b==''):
-        if  (a[-1] >= high_sell):# and all(a[-2:-1] < high)) :
+        if  (a[-1] >= high):# and all(a[-2:-1] < high)) :
             b= 'up'
             print('up')
             not_action_step =0
 
-        elif(a[-1] <= down_sell):# and all(a[-3:-1]>down)) :
+        elif(a[-1] <= down):# and all(a[-3:-1]>down)) :
             b= 'down'
             print('down')
             not_action_step =0
@@ -179,7 +178,7 @@ while(True):
             not_action_step+=1
     
     if(b ==''):
-        if local_min + local_min*0.006 <= cl_array[-1]:
+        if last_buy + last_buy*0.006 <= cl_array[-1]:
             print('+5p')
             not_action_step =0
         
@@ -229,7 +228,8 @@ while(True):
     print('RSI   : ',a[-1])
     print('USDT  : ', "{:.4f}".format(float(api.currency_Inventory('usdt'))))   
     print('Currency: ', "{:.4f}".format(float(api.currency_Inventory(currency))))    
-    print('last_sells: ', last_sell)    
+    print('last_buy: ', last_buy)
+    print('buy_amount: ', buy_amount)
     print('Price : ' , cl_array[-1])        
     print(*history, sep = "\n")
 
