@@ -12,12 +12,13 @@ import time
 import csv
 import os.path
 import api_funtions as api
+import share
 # from get_log import send_message
 
 
+# defining local variable #
 
-
-currency = 'KDA'
+currency = share.currency
 RSI_PERIOD = 14
 # trans_ratio = 6/10
 high =63
@@ -26,21 +27,18 @@ sl_ratio = 0.8
 
 
 
+#this function can sell currencies immediately when encounter Stop_Lost_Limit
 
-
-
-    
 def sell_and_stop(mod):
     
-    global last_buy , last_sell, history , time_str, cl_array, not_sell_step, local_max, b,turn
+    global last_buy , last_sell, history , time_str, cl_array, not_sell_step, local_max, b
     b = ''
     
     temp_amount = "{:.3f}".format(float(api.currency_Inventory(currency))*99/100)
     is_sell = api.sell(currency_market ,temp_amount )
     if (is_sell):
-        history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_buy, float(temp_amount)*cl_array[-1] ,str(int(a[-1]))+' _ '+str(mod), api.total_money(cl_array[-1])]) 
+        history.append(['sell',time_str, str("{:.2f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_buy, float(temp_amount)*cl_array[-1] ,str(int(a[-1]))+' _ '+str(mod), api.total_money()]) 
         print('limit')
-        turn = 'buy'
         last_sell = cl_array[-1]
         not_sell_step = 0
         local_max = cl_array[-1]
@@ -87,8 +85,8 @@ def sell_and_stop(mod):
                                 exit()
     
         
-    
-    
+# this is for sell and buy simply  :))
+ 
 def Action_func(type_action):
         
         global last_sell,last_buy, local_min, local_max, total_cash, total_bit, high, down, turn, not_sell_step
@@ -98,11 +96,11 @@ def Action_func(type_action):
         if  (type_action == 'sell'):
 
             
-            temp_amount = "{:.2f}".format(float(api.currency_Inventory(currency))*99/100)
+            temp_amount = 'all'#"{:.2f}".format(float(api.currency_Inventory(currency))*99/100)
             
             is_sell = api.sell(currency_market ,temp_amount )
             if (is_sell):
-                history.append(['sell',time_str, str("{:.3f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_buy, float("{:.2f}".format(float(temp_amount)))*cl_array[-1] ,int(a[-1]) ,api.total_money(cl_array[-1])]) 
+                history.append(['sell',time_str, str("{:.3f}".format((cl_array[-1]-last_buy)/last_buy*100))+'%', cl_array[-1],last_buy, float("{:.2f}".format(float(temp_amount)))*cl_array[-1] ,int(a[-1]) ,api.total_money()]) 
                 print('sell')
                 turn = 'buy'
                 # send_message([history[0],history[-1]])
@@ -117,11 +115,11 @@ def Action_func(type_action):
             
         elif(type_action == 'buy '):
             
-            temp_amount = "{:.2f}".format(float(api.currency_Inventory('usdt'))*99/100)
+            temp_amount = 'all'#"{:.2f}".format(float(api.currency_Inventory('usdt'))*99/100)
             
             is_buy = api.buy(currency_market ,temp_amount )
             if (is_buy):
-                history.append(['buy ',time_str, '-----', cl_array[-1],'------', "{:.2f}".format(float(temp_amount)), int(a[-1]) ,api.total_money(cl_array[-1])]) 
+                history.append(['buy ',time_str, '-----', cl_array[-1],'------', "{:.2f}".format(float(temp_amount)), int(a[-1]) ,api.total_money()]) 
                 print('buy')
                 turn = 'sell'
                 # send_message([history[0],history[-1]])
@@ -132,7 +130,8 @@ def Action_func(type_action):
             high =61
             local_max = cl_array[-1]
 
-        
+# some local variable should updating in each iteration 
+
 def update_locals():
         global last_buy ,last_sell, action, local_max,local_min
         
@@ -160,7 +159,7 @@ def update_locals():
         
 
 
-
+# Current time in form of string 
 def time_now(type_time = 'str'):
     
         if(type_time == 'str'):
@@ -169,7 +168,7 @@ def time_now(type_time = 'str'):
             return time_str
     
     
-
+# recording history or load them for first epoch
 def log( currency_name , typ = 'read', old_history = []):
     
     currency_log_path = './log/'+currency_name+'-history.csv'
@@ -182,13 +181,13 @@ def log( currency_name , typ = 'read', old_history = []):
         if not(os.path.isfile(currency_log_path)):
             with open(currency_log_path ,'a',newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['type', 'time_hms', 'Prof', 'Price', 'buy_in', 'Amount', 'RSI' , 'Total'])
+                writer.writerow(['type ', ' time_ hms ', 'Prof', 'Price', 'buy_in', 'Amount', 'RSI' , 'Total'])
                 f.close()
                 
         with open(currency_log_path,'a', newline='') as f:
             
             writer = csv.writer(f)
-            writer.writerows([['____', '________', '____', 'START', '______', '______', '___', '____']])
+            writer.writerows([['START', time_now(), '____', 'START', '______', '______', '___', '_____']])
 
         with open(currency_log_path,'r', newline='') as f:
         
@@ -197,7 +196,7 @@ def log( currency_name , typ = 'read', old_history = []):
             f.close()
             return new_history
     
-
+# other nonsignificant variables
 epoch = 0
 not_action_step =0
 not_sell_step = 0
@@ -206,7 +205,6 @@ last_sell = 0
 b = ''
 local_min = 0
 local_max = 0
-limit_loss = 0
 turn = 'sell' if api.usdt_percentage(currency)<50 else 'buy'
 currency_market = currency + '-USDT'
 history = log(currency_market)
@@ -222,14 +220,8 @@ while(True):
     print('\n#########==> Epoch : ',epoch ,' ##################################\n')
     
     # cl_array  = api.live_price(currency_market)
-    try:
-        cl_array  = api.live_price3(currency_market).astype(float)
-    except:
-        #link = 'https://api.telegram.org/bot5133479538:AAE4AZMfEAoB9oSaJDFj-BcJZFauoK2_DM8/sendMessage?chat_id=193056503&text=error'
-        #requests.get(link)
-        time.sleep(3)
-        continue
-    # cl_array =  api.live_price2(currency, limit=40).astype(float)
+    
+    cl_array =  api.live_price2(currency, limit=40).astype(float)
     
     a = np.array(ta.RSI(cl_array, RSI_PERIOD)) 
 
@@ -260,23 +252,23 @@ while(True):
     if (history[-1][0] == 'buy '):
         profit = ( local_max - last_buy )/last_buy
         
-        # # limit_loss = 0
-        # # mod = 0
-        # if profit < (0.2 / 100):#  and ((mv[-1]-mv[-2])<(mv[-5]-mv[-6])) and (mv[-1] > mv[-2])):
+        # limit_loss = 0
+        # mod = 0
+        if profit < (0.2 / 100):#  and ((mv[-1]-mv[-2])<(mv[-5]-mv[-6])) and (mv[-1] > mv[-2])):
             
-        #     # limit_loss = last_buy * (100-sl_ratio) / 100
-        #     limit_loss = 0
-        #     mod = 1
+            # limit_loss = last_buy * (100-sl_ratio) / 100
+            limit_loss = 0
+            mod = 1
             
-        # elif(profit >= (0.2/100) and profit< (0.7/100)):
+        elif(profit >= (0.2/100) and profit< (0.7/100)):
             
-        #     # limit_loss = last_buy
-        #     limit_loss = 0
-        #     mod = 2
+            # limit_loss = last_buy
+            limit_loss = 0
+            mod = 2
         
-        if(profit >= (0.6/100)):
+        elif(profit >= (0.6/100)):
             limit_loss = local_max - last_buy* 0.4/100
-            #limit_loss = 0
+            limit_loss = 0
             mod = 3
             print(profit)
         
@@ -284,16 +276,15 @@ while(True):
                 
         if ((limit_loss > cl_array[-1])): #or (not_sell_step >180 and (cl_array[-1] < last_buy*(1 - sl_ratio/100) and mv[-1] < mv[-4]))):
             not_action_step =0
-            limit_loss = 0
             print('LIMIT!!!! , sell and stop')
             sell_and_stop(mod)
         
         # action = 1
     
-    if(not_action_step >= 30): 
+    if(not_action_step >= 15): 
         high -=0.25
         down +=0.25
-        not_action_step -= 20
+        not_action_step -= 10
         
         
         
@@ -325,16 +316,17 @@ while(True):
     
     print('Time  : ',time_str)
     print('RSI   : ',a[-1])
-    print('USDT  : ', "{:.4f}".format(float(api.currency_Inventory('usdt')))) 
+    print('USDT  : ', "{:.4f}".format(api.assets)) 
     try:
-        print('Currency: ', "{:.5f}".format(float(api.currency_Inventory(currency))))   
+        print('Currency: ', "{:.5f}".format(api.currency))   
     except :pass
-    print('Price : ' , cl_array[-1])        
+    print('Price : ' , cl_array[-1])      
+    print('Price : ' , api.total_money())      
     print(*history, sep = "\n")
     end = time.time()
 
-    if ((end - start)<30):
-        time.sleep(30 - (end - start))
+    if ((end - start)<60):
+        time.sleep(60 - (end - start))
 
 
 
