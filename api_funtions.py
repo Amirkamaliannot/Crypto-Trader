@@ -12,9 +12,9 @@ import requests
 import pandas as pd
 import share
 
-api_key = '61fd42c3fc26a7000117fd--'
-api_secret = '2fed061c-d5ef-4e89-b11a-4de9b4a114--'
-api_passphrase = '551Aa8624551Aa86--'
+api_key = ''
+api_secret = ''
+api_passphrase = ''
 
 
 # client = Client(api_key, api_secret, api_passphrase)
